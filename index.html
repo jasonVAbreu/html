@@ -3,93 +3,474 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Editor Web — v2</title>
-  <link rel="stylesheet" href="styles.css">
+  <title>Editor Visual HTML — Arrastrar, Editar y Exportar</title>
+  <!-- Tailwind para UI rápida -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    /* Estilos base del lienzo y helpers */
+    #canvas {
+      background: repeating-conic-gradient(#f7fafc 0% 25%, #ffffff 0% 50%) 50%/20px 20px;
+      box-shadow: inset 0 0 0 1px #e2e8f0;
+      position: relative;
+      overflow: hidden;
+      user-select: none;
+    }
+    .selection-ring {
+      position: absolute;
+      border: 1.5px dashed #2563eb;
+      outline: 2px solid rgba(37,99,235,.15);
+      outline-offset: 1px;
+      pointer-events: none;
+      z-index: 9999;
+    }
+    .handle {
+      width: 10px; height: 10px; background: #2563eb; border-radius: 2px; position: absolute;
+      transform: translate(-50%, -50%);
+    }
+    .handle.nw{ top:0; left:0;} .handle.ne{ top:0; left:100%;} .handle.sw{ top:100%; left:0;} .handle.se{ top:100%; left:100%;}
+
+    .tool-btn { @apply px-3 py-2 rounded-lg border border-slate-300 hover:bg-slate-100 active:scale-95 transition; }
+    .badge { @apply text-[11px] px-2 py-0.5 rounded-full bg-slate-100 border border-slate-300; }
+    .btn-primary { @apply px-3 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 active:scale-95; }
+    .btn { @apply px-3 py-2 rounded-lg border border-slate-300 hover:bg-slate-100 active:scale-95; }
+    .kbd { @apply px-2 py-0.5 rounded border border-slate-300 bg-slate-50 text-slate-700; font-size:11px; }
+  </style>
 </head>
-<body>
-<header class="topbar">
-  <div class="brand">Editor Web — v2</div>
-  <div class="canvas-controls">
-    <label>Ancho: <input id="canvasWidth" type="number" value="900" min="200"></label>
-    <label>Alto: <input id="canvasHeight" type="number" value="600" min="200"></label>
-    <label>Fondo: <input id="canvasBg" type="color" value="#ffffff"></label>
-    <button id="applyCanvas">Aplicar</button>
-    <button id="clearCanvas" title="Eliminar todo">Limpiar</button>
-    <button id="saveHTML" title="Guardar como HTML">Guardar HTML</button>
+<body class="bg-white text-slate-800">
+  <div class="max-w-[1400px] mx-auto p-4 space-y-3">
+    <!-- Header -->
+    <header class="flex items-center justify-between gap-3">
+      <div class="flex items-center gap-3">
+        <h1 class="text-xl font-semibold">Editor Visual HTML</h1>
+        <span class="badge">v1</span>
+      </div>
+      <div class="flex items-center gap-2">
+        <button id="btnExportHTML" class="btn-primary">Exportar HTML</button>
+        <button id="btnExportPNG" class="btn">Exportar PNG</button>
+      </div>
+    </header>
+
+    <!-- Top controls -->
+    <section class="grid grid-cols-12 gap-3">
+      <div class="col-span-12 lg:col-span-3 space-y-2">
+        <div class="p-3 border rounded-xl space-y-2">
+          <div class="flex items-center justify-between"><h2 class="font-medium">Tamaño del lienzo</h2></div>
+          <div class="grid grid-cols-3 gap-2 text-sm">
+            <label class="col-span-1 flex items-center gap-2">W<input id="inpW" type="number" class="w-full border rounded-lg px-2 py-1" value="1080"></label>
+            <label class="col-span-1 flex items-center gap-2">H<input id="inpH" type="number" class="w-full border rounded-lg px-2 py-1" value="1080"></label>
+            <button id="btnResize" class="btn">Aplicar</button>
+          </div>
+          <div class="flex flex-wrap gap-2 text-xs">
+            <button data-preset="1080x1080" class="tool-btn">Post 1080×1080</button>
+            <button data-preset="1080x1920" class="tool-btn">Story 1080×1920</button>
+            <button data-preset="1350x1080" class="tool-btn">Carrusel 1350×1080</button>
+          </div>
+        </div>
+
+        <div class="p-3 border rounded-xl space-y-2">
+          <div class="flex items-center justify-between"><h2 class="font-medium">Insertar</h2></div>
+          <div class="grid grid-cols-2 gap-2">
+            <button id="addRect" class="btn">Rectángulo</button>
+            <button id="addCircle" class="btn">Círculo</button>
+            <button id="addText" class="btn">Texto</button>
+            <button id="addImage" class="btn">Imagen (URL)</button>
+          </div>
+        </div>
+
+        <div class="p-3 border rounded-xl space-y-2">
+          <div class="flex items-center justify-between"><h2 class="font-medium">Importar HTML</h2></div>
+          <textarea id="taHTML" class="w-full h-40 border rounded-lg p-2 font-mono text-[12px]" placeholder="Pega aquí tu HTML (solo el contenido del post)"></textarea>
+          <div class="flex items-center gap-2">
+            <button id="btnLoadHTML" class="btn-primary">Cargar al lienzo</button>
+            <button id="btnToAbsolute" class="btn" title="Convierte elementos en posicionamiento absoluto para poder moverlos">Hacer movibles</button>
+          </div>
+          <p class="text-xs text-slate-500">Consejo: añade <code>data-editable</code> a los elementos de tu plantilla para control fino.</p>
+        </div>
+      </div>
+
+      <!-- Canvas column -->
+      <div class="col-span-12 lg:col-span-6">
+        <div class="p-3 border rounded-xl">
+          <div id="canvasWrap" class="w-full overflow-auto">
+            <div id="canvas" class="mx-auto" style="width:1080px;height:1080px;"></div>
+          </div>
+          <div class="flex items-center justify-between pt-3 text-xs text-slate-500">
+            <div>Tip: doble clic sobre un texto para editarlo <span class="kbd">contentEditable</span>.</div>
+            <div class="flex items-center gap-2">
+              <button id="btnZoomOut" class="btn">-</button>
+              <span id="lblZoom" class="w-10 text-center">100%</span>
+              <button id="btnZoomIn" class="btn">+</button>
+              <button id="btnZoomReset" class="btn">Reset</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Properties -->
+      <div class="col-span-12 lg:col-span-3 space-y-2">
+        <div class="p-3 border rounded-xl space-y-2">
+          <div class="flex items-center justify-between"><h2 class="font-medium">Propiedades</h2><span id="selTag" class="text-xs text-slate-500"></span></div>
+          <div class="grid grid-cols-2 gap-2 text-sm">
+            <label class="col-span-2">Texto
+              <input id="propText" type="text" class="w-full border rounded-lg px-2 py-1" placeholder="(para elementos con texto)">
+            </label>
+            <label>Fuente
+              <input id="propFontFamily" type="text" class="w-full border rounded-lg px-2 py-1" placeholder="'Inter', Arial">
+            </label>
+            <label>Tamaño
+              <input id="propFontSize" type="number" class="w-full border rounded-lg px-2 py-1" value="24">
+            </label>
+            <label class="col-span-1">Color
+              <input id="propColor" type="color" class="w-full border rounded-lg px-2 py-1" value="#111827">
+            </label>
+            <label class="col-span-1">Fondo
+              <input id="propBg" type="color" class="w-full border rounded-lg px-2 py-1" value="#ffffff">
+            </label>
+            <label>Borde
+              <input id="propBorder" type="text" class="w-full border rounded-lg px-2 py-1" placeholder="1px solid #000">
+            </label>
+            <label>Radio
+              <input id="propRadius" type="number" class="w-full border rounded-lg px-2 py-1" value="0">
+            </label>
+            <label>Opacidad
+              <input id="propOpacity" type="range" min="0" max="1" step="0.01" value="1" class="w-full">
+            </label>
+            <label>Z-Index
+              <input id="propZ" type="number" class="w-full border rounded-lg px-2 py-1" value="1">
+            </label>
+            <div class="col-span-2 flex items-center gap-2 pt-2">
+              <button id="btnFront" class="btn">Al frente</button>
+              <button id="btnBack" class="btn">Al fondo</button>
+              <button id="btnDelete" class="btn text-red-600 border-red-300">Eliminar</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="p-3 border rounded-xl space-y-2">
+          <div class="flex items-center justify-between"><h2 class="font-medium">HTML actual</h2></div>
+          <textarea id="taOut" class="w-full h-40 border rounded-lg p-2 font-mono text-[12px]" readonly></textarea>
+          <div class="flex items-center gap-2">
+            <button id="btnRefreshHTML" class="btn">Refrescar</button>
+            <button id="btnCopyHTML" class="btn">Copiar</button>
+            <button id="btnDownloadHTML" class="btn">Descargar .html</button>
+          </div>
+        </div>
+      </div>
+    </section>
   </div>
-</header>
 
-<main class="layout">
-  <aside class="sidebar">
-    <h3>Agregar</h3>
-    <button id="addRect">Rectángulo</button>
-    <button id="addCircle">Círculo</button>
-    <button id="addText">Texto</button>
-    <div class="img-adder">
-      <input id="imgUrl" type="url" placeholder="URL de imagen..." />
-      <button id="addImage">Imagen</button>
-    </div>
-    <details>
-      <summary>Acciones</summary>
-      <button id="bringFront">Traer al frente</button>
-      <button id="sendBack">Enviar al fondo</button>
-      <button id="deleteItem" class="danger">Eliminar seleccionado</button>
-    </details>
-    <p class="hint">Tip: Arrastra usando la barra superior del bloque. Haz clic dentro del texto para escribir.</p>
-  </aside>
+  <!-- Libs -->
+  <script src="https://cdn.jsdelivr.net/npm/interactjs/dist/interact.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/html-to-image@1.11.11/dist/html-to-image.min.js"></script>
 
-  <section class="stage-wrap">
-    <div id="canvas" class="canvas" style="width:900px;height:600px;background:#ffffff;"></div>
-  </section>
+  <script>
+  // ===============================
+  // Utilidades
+  // ===============================
+  const $ = (sel, root=document) => root.querySelector(sel);
+  const $$ = (sel, root=document) => Array.from(root.querySelectorAll(sel));
 
-  <aside class="inspector">
-    <h3>Código HTML</h3>
-    <textarea id="htmlCode" placeholder="Aquí verás o pegarás HTML..."></textarea>
-    <div class="code-actions">
-      <button id="refreshFromCanvas" title="Ver HTML actual del lienzo">Ver HTML del lienzo</button>
-      <button id="insertHTML" title="Insertar el HTML como bloque movible">Insertar HTML</button>
-      <button id="replaceCanvas" class="danger" title="Reemplaza TODO el lienzo">Reemplazar lienzo</button>
-    </div>
+  const canvas = $('#canvas');
+  const taHTML = $('#taHTML');
+  const taOut  = $('#taOut');
+  const selTag = $('#selTag');
 
-    <h3>Propiedades</h3>
-    <div id="noSel">Sin selección</div>
-    <div id="props" class="hidden">
-      <div class="row"><label>X: <input id="posX" type="number"></label> <label>Y: <input id="posY" type="number"></label></div>
-      <div class="row"><label>Ancho: <input id="propW" type="number" min="10"></label> <label>Alto: <input id="propH" type="number" min="10"></label></div>
-      <div class="row"><label>Fondo: <input id="bgColor" type="color" value="#4aa3ff"></label></div>
-      <div class="row"><label>Imagen de fondo (URL): <input id="bgImage" type="url" placeholder="https://..."></label></div>
-      <div class="row"><label>Borde color: <input id="bdColor" type="color" value="#1e293b"></label> <label>Ancho: <input id="bdWidth" type="number" value="1" min="0">px</label></div>
-      <div class="row"><label>Radio: <input id="bdRadius" type="number" value="8" min="0">px</label> <label>Opacidad: <input id="opacity" type="range" min="0" max="1" step="0.05" value="1"></label></div>
+  let selected = null;
+  let zoom = 1;
 
-      <details id="textBlock">
-        <summary>Texto</summary>
-        <div class="row">
-          <label>Tamaño: <input id="fontSize" type="number" value="28" min="8">px</label>
-          <label>Color: <input id="fontColor" type="color" value="#111111"></label>
-        </div>
-        <div class="row">
-          <label>Fuente:
-            <select id="fontFamily">
-              <option>Arial, Helvetica, sans-serif</option>
-              <option>Georgia, serif</option>
-              <option>"Trebuchet MS", sans-serif</option>
-              <option>Impact, Charcoal, sans-serif</option>
-              <option>"Courier New", monospace</option>
-            </select>
-          </label>
-          <label>Peso:
-            <select id="fontWeight">
-              <option value="400">Normal</option>
-              <option value="600">Semi-bold</option>
-              <option value="700">Bold</option>
-            </select>
-          </label>
-        </div>
-      </details>
-    </div>
-  </aside>
-</main>
+  function uid(prefix='el'){
+    return prefix + '-' + Math.random().toString(36).slice(2,8);
+  }
 
-<script src="app.js"></script>
+  function canvasRect(){ return canvas.getBoundingClientRect(); }
+
+  function clamp(n, min, max){ return Math.max(min, Math.min(n, max)); }
+
+  function makeAbsolute(el){
+    const cRect = canvasRect();
+    const r = el.getBoundingClientRect();
+    const computed = getComputedStyle(el);
+    const w = r.width; const h = r.height;
+    const left = (r.left - cRect.left) + canvas.scrollLeft;
+    const top  = (r.top  - cRect.top)  + canvas.scrollTop;
+
+    el.style.position = 'absolute';
+    el.style.left = left / zoom + 'px';
+    el.style.top  = top  / zoom + 'px';
+    el.style.width = w / zoom + 'px';
+    el.style.height= h / zoom + 'px';
+  }
+
+  function wrapDefaults(el){
+    el.setAttribute('tabindex','0');
+    el.dataset.movable = '1';
+    el.style.cursor = 'move';
+    el.style.touchAction = 'none';
+  }
+
+  function addElement(kind){
+    const el = document.createElement('div');
+    el.id = uid('node');
+    el.style.position = 'absolute';
+    el.style.left = '80px';
+    el.style.top  = '80px';
+    el.style.width = '200px';
+    el.style.height= '120px';
+    el.style.display= 'flex';
+    el.style.alignItems = 'center';
+    el.style.justifyContent = 'center';
+    el.style.fontFamily = 'Inter, system-ui, Arial';
+    el.style.fontSize = '24px';
+    el.style.color = '#111827';
+    el.style.background = '#ffffff';
+    el.style.border = '1px solid #cbd5e1';
+    el.style.borderRadius = '8px';
+    el.style.boxShadow = '0 1px 2px rgba(0,0,0,.06)';
+
+    if(kind==='rect'){
+      el.textContent = 'Rectángulo';
+    } else if(kind==='circle'){
+      el.textContent = 'Círculo';
+      el.style.borderRadius = '9999px';
+    } else if(kind==='text'){
+      el.textContent = 'Doble clic para editar';
+      el.style.background = 'transparent';
+      el.style.border = 'none';
+      el.style.height = 'auto';
+    } else if(kind==='image'){
+      el.style.background = '#e2e8f0';
+      el.style.border = '1px dashed #94a3b8';
+      el.textContent = 'Imagen';
+      el.dataset.imageHolder = '1';
+    }
+
+    el.setAttribute('data-editable','');
+    wrapDefaults(el);
+    canvas.appendChild(el);
+    enableInteract(el);
+    select(el);
+  }
+
+  function select(el){
+    if(!el || el===canvas){ return deselect(); }
+    if(!el.dataset.movable){ wrapDefaults(el); }
+    selected = el;
+    $$('.selection-ring', canvas).forEach(n=>n.remove());
+
+    // Dibujar selección
+    const ring = document.createElement('div');
+    ring.className = 'selection-ring';
+    ring.style.left = el.style.left || (el.offsetLeft + 'px');
+    ring.style.top  = el.style.top  || (el.offsetTop  + 'px');
+    ring.style.width= el.offsetWidth + 'px';
+    ring.style.height= el.offsetHeight + 'px';
+
+    const hNW = document.createElement('div'); hNW.className='handle nw';
+    const hNE = document.createElement('div'); hNE.className='handle ne';
+    const hSW = document.createElement('div'); hSW.className='handle sw';
+    const hSE = document.createElement('div'); hSE.className='handle se';
+    ring.append(hNW,hNE,hSW,hSE);
+
+    ring.dataset.for = el.id || (el.id = uid('node'));
+    canvas.appendChild(ring);
+
+    // UI propiedades
+    selTag.textContent = '<' + el.tagName.toLowerCase() + (el.id? ('#'+el.id):'') + '>';
+    $('#propText').value = (el.textContent && el.textContent.trim()) || '';
+    $('#propFontFamily').value = el.style.fontFamily || '';
+    $('#propFontSize').value = parseInt(el.style.fontSize || 24);
+    $('#propColor').value = rgbToHex(getComputedStyle(el).color);
+    $('#propBg').value = rgbToHex(getComputedStyle(el).backgroundColor);
+    $('#propBorder').value = el.style.border || '';
+    $('#propRadius').value = parseInt(el.style.borderRadius || 0);
+    $('#propOpacity').value = parseFloat(el.style.opacity || 1);
+    $('#propZ').value = parseInt(el.style.zIndex || 1);
+  }
+
+  function deselect(){
+    selected = null;
+    $$('.selection-ring', canvas).forEach(n=>n.remove());
+    selTag.textContent = '';
+  }
+
+  function enableInteract(el){
+    if(el._interactEnabled) return;
+    el._interactEnabled = true;
+    interact(el)
+      .draggable({
+        listeners: {
+          move (event) {
+            const x = (parseFloat(el.style.left)||0) + event.dx/zoom;
+            const y = (parseFloat(el.style.top)||0)  + event.dy/zoom;
+            el.style.left = x + 'px';
+            el.style.top  = y + 'px';
+            updateRing(el);
+          }
+        }
+      })
+      .resizable({
+        edges: { left: true, right: true, bottom: true, top: true },
+      })
+      .on('resizemove', (event)=>{
+        let { x, y } = event.target.dataset;
+        x = (parseFloat(x)||parseFloat(event.target.style.left)||0);
+        y = (parseFloat(y)||parseFloat(event.target.style.top)||0);
+        const w = event.rect.width/zoom; const h = event.rect.height/zoom;
+        event.target.style.width = w + 'px';
+        event.target.style.height= h + 'px';
+        x += event.deltaRect.left/zoom;
+        y += event.deltaRect.top/zoom;
+        event.target.style.left = x + 'px';
+        event.target.style.top  = y + 'px';
+        event.target.dataset.x = x;
+        event.target.dataset.y = y;
+        updateRing(event.target);
+      });
+  }
+
+  function updateRing(el){
+    const ring = $(`.selection-ring[data-for="${el.id}"]`, canvas);
+    if(!ring) return;
+    ring.style.left = el.style.left;
+    ring.style.top  = el.style.top;
+    ring.style.width= el.offsetWidth + 'px';
+    ring.style.height= el.offsetHeight + 'px';
+  }
+
+  function rgbToHex(rgb){
+    if(!rgb) return '#000000';
+    const m = rgb.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/);
+    if(!m) return '#000000';
+    return '#' + [m[1],m[2],m[3]].map(x=>('0'+parseInt(x).toString(16)).slice(-2)).join('');
+  }
+
+  function refreshHTML(){
+    taOut.value = canvas.innerHTML.trim();
+  }
+
+  function download(filename, text){
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([text], {type:'text/html'}));
+    a.download = filename;
+    a.click();
+  }
+
+  // ===============================
+  // Eventos UI
+  // ===============================
+  $('#addRect').onclick = ()=> addElement('rect');
+  $('#addCircle').onclick = ()=> addElement('circle');
+  $('#addText').onclick = ()=> addElement('text');
+  $('#addImage').onclick = async ()=>{
+    const url = prompt('URL de la imagen:');
+    if(!url) return;
+    const img = document.createElement('img');
+    img.id = uid('img');
+    img.src = url; img.alt = 'image';
+    img.style.position='absolute'; img.style.left='100px'; img.style.top='100px';
+    img.style.width='300px'; img.style.height='auto';
+    img.setAttribute('data-editable','');
+    wrapDefaults(img); canvas.appendChild(img); enableInteract(img); select(img);
+  };
+
+  $('#btnLoadHTML').onclick = ()=>{
+    const html = taHTML.value || '';
+    canvas.innerHTML = html;
+    // Opcional: activar movibilidad en elementos marcados
+    $$('#canvas [data-editable]').forEach(el=>{ if(getComputedStyle(el).position!=='absolute') makeAbsolute(el); wrapDefaults(el); enableInteract(el); });
+    deselect(); refreshHTML();
+  };
+
+  $('#btnToAbsolute').onclick = ()=>{
+    const list = $$('#canvas *:not(style):not(script)');
+    list.forEach(el=>{
+      if(el===canvas) return;
+      const st = getComputedStyle(el);
+      if(st.position!=='absolute'){
+        try{ makeAbsolute(el); wrapDefaults(el); enableInteract(el);}catch(e){}
+      } else { wrapDefaults(el); enableInteract(el); }
+    });
+    alert('Elementos convertidos a movibles.');
+  };
+
+  $('#btnRefreshHTML').onclick = refreshHTML;
+  $('#btnCopyHTML').onclick = ()=>{ refreshHTML(); navigator.clipboard.writeText(taOut.value); };
+  $('#btnDownloadHTML').onclick = ()=>{
+    refreshHTML();
+    const w = parseInt($('#inpW').value)||1080; const h=parseInt($('#inpH').value)||1080;
+    const outer = `<!DOCTYPE html><html lang=\"es\"><head><meta charset=\"utf-8\"/><meta name=\"viewport\" content=\"width=device-width, initial-scale=1\"/><title>Export</title><style>body{margin:0}#post{position:relative;width:${w}px;height:${h}px;overflow:hidden}</style></head><body><div id=\"post\">${taOut.value}</div></body></html>`;
+    download('post-export.html', outer);
+  };
+
+  $('#btnExportHTML').onclick = ()=> $('#btnDownloadHTML').click();
+
+  $('#btnExportPNG').onclick = async ()=>{
+    try{
+      const dataUrl = await htmlToImage.toPng(canvas);
+      const a = document.createElement('a'); a.href = dataUrl; a.download = 'post.png'; a.click();
+    }catch(e){ alert('No se pudo exportar a PNG: ' + e.message); }
+  };
+
+  // Propiedades
+  $('#propText').oninput = ()=>{ if(selected){ selected.textContent = $('#propText').value; refreshHTML(); } };
+  $('#propFontFamily').oninput = ()=>{ if(selected){ selected.style.fontFamily = $('#propFontFamily').value; refreshHTML(); } };
+  $('#propFontSize').oninput = ()=>{ if(selected){ selected.style.fontSize = parseInt($('#propFontSize').value)+'px'; refreshHTML(); } };
+  $('#propColor').oninput = ()=>{ if(selected){ selected.style.color = $('#propColor').value; refreshHTML(); } };
+  $('#propBg').oninput = ()=>{ if(selected){ selected.style.background = $('#propBg').value; refreshHTML(); } };
+  $('#propBorder').oninput = ()=>{ if(selected){ selected.style.border = $('#propBorder').value; refreshHTML(); } };
+  $('#propRadius').oninput = ()=>{ if(selected){ selected.style.borderRadius = parseInt($('#propRadius').value)+'px'; refreshHTML(); } };
+  $('#propOpacity').oninput = ()=>{ if(selected){ selected.style.opacity = $('#propOpacity').value; refreshHTML(); } };
+  $('#propZ').oninput = ()=>{ if(selected){ selected.style.zIndex = parseInt($('#propZ').value); refreshHTML(); } };
+
+  $('#btnFront').onclick = ()=>{ if(selected){ selected.style.zIndex = (parseInt(selected.style.zIndex||1)+10); refreshHTML(); }};
+  $('#btnBack').onclick  = ()=>{ if(selected){ selected.style.zIndex = (parseInt(selected.style.zIndex||1)-10); refreshHTML(); }};
+  $('#btnDelete').onclick = ()=>{ if(selected){ selected.remove(); deselect(); refreshHTML(); }};
+
+  // Selección por click y edición de texto por doble click
+  canvas.addEventListener('click', (e)=>{
+    const target = e.target;
+    if(target===canvas){ deselect(); return; }
+    const el = target.closest('[data-editable], img, svg, p, span, h1, h2, h3, h4, h5, h6, div');
+    if(!el || el===canvas) return;
+    if(getComputedStyle(el).position!=='absolute') makeAbsolute(el);
+    wrapDefaults(el); enableInteract(el); select(el);
+  });
+
+  canvas.addEventListener('dblclick', (e)=>{
+    const el = e.target.closest('[data-editable], p, span, h1, h2, h3, h4, h5, h6, div');
+    if(!el) return;
+    el.contentEditable = (el.contentEditable !== 'true');
+    if(el.contentEditable==='true'){ el.focus(); }
+  });
+
+  // Zoom (visualmente escala el canvas)
+  function applyZoom(){
+    canvas.style.transform = `scale(${zoom})`;
+    canvas.style.transformOrigin = 'top left';
+    $('#lblZoom').textContent = Math.round(zoom*100)+'%';
+  }
+  $('#btnZoomIn').onclick = ()=>{ zoom = clamp(zoom+0.1, .2, 3); applyZoom(); };
+  $('#btnZoomOut').onclick= ()=>{ zoom = clamp(zoom-0.1, .2, 3); applyZoom(); };
+  $('#btnZoomReset').onclick= ()=>{ zoom = 1; applyZoom(); };
+  applyZoom();
+
+  // Presets y tamaño
+  $$("[data-preset]").forEach(btn=>{
+    btn.onclick = ()=>{
+      const [w,h] = btn.dataset.preset.split('x').map(Number);
+      $('#inpW').value = w; $('#inpH').value = h; resizeCanvas(w,h);
+    };
+  });
+  $('#btnResize').onclick = ()=>{
+    const w = parseInt($('#inpW').value)||1080; const h=parseInt($('#inpH').value)||1080; resizeCanvas(w,h);
+  };
+  function resizeCanvas(w,h){ canvas.style.width = w+'px'; canvas.style.height = h+'px'; }
+
+  // Inicio: un fondo de ejemplo
+  addElement('text');
+  $('#propText').value = 'Tu diseño aquí';
+  if(selected){ selected.textContent = 'Tu diseño aquí'; }
+  refreshHTML();
+  </script>
 </body>
 </html>
