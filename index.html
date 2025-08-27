@@ -187,18 +187,31 @@
   function clamp(n, min, max){ return Math.max(min, Math.min(n, max)); }
 
   function makeAbsolute(el){
+    // Convierte cualquier elemento a absoluto y lo reubica como hijo directo del canvas
+    // para evitar que se "pierda" por offsets relativos a su contenedor original.
+    if(!el || el===canvas) return;
+
     const cRect = canvasRect();
     const r = el.getBoundingClientRect();
-    const computed = getComputedStyle(el);
-    const w = r.width; const h = r.height;
-    const left = (r.left - cRect.left) + canvas.scrollLeft;
-    const top  = (r.top  - cRect.top)  + canvas.scrollTop;
+    const w = r.width / zoom; 
+    const h = r.height/ zoom;
+    const left = ((r.left - cRect.left) + canvas.scrollLeft) / zoom;
+    const top  = ((r.top  - cRect.top)  + canvas.scrollTop ) / zoom;
 
+    // Asegurar que después de reparentar siga viéndose igual
+    el.style.margin = '0';
     el.style.position = 'absolute';
-    el.style.left = left / zoom + 'px';
-    el.style.top  = top  / zoom + 'px';
-    el.style.width = w / zoom + 'px';
-    el.style.height= h / zoom + 'px';
+    el.style.left = left + 'px';
+    el.style.top  = top  + 'px';
+    el.style.width = w + 'px';
+    el.style.height= (h>0? h : el.offsetHeight) + 'px';
+    el.style.boxSizing = 'border-box';
+    if(!el.style.zIndex) el.style.zIndex = '1';
+
+    // Reparentamos para que la referencia de posicionamiento sea el canvas
+    if(el.parentElement !== canvas){
+      canvas.appendChild(el);
+    }
   }
 
   function wrapDefaults(el){
