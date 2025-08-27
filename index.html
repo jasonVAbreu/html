@@ -3,25 +3,46 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Editor Visual HTML — v2</title>
+  <title>Editor Visual HTML — Arrastrar, Editar y Exportar</title>
+  <!-- Tailwind para UI rápida -->
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
-    #canvas { background: repeating-conic-gradient(#f7fafc 0% 25%, #ffffff 0% 50%) 50%/20px 20px; box-shadow: inset 0 0 0 1px #e2e8f0; position: relative; overflow: hidden; user-select: none; }
-    .selection-ring{ position:absolute; border:1.5px dashed #2563eb; outline:2px solid rgba(37,99,235,.15); outline-offset:1px; pointer-events:none; z-index:9999; }
-    .handle{ width:10px;height:10px;background:#2563eb;border-radius:2px;position:absolute;transform:translate(-50%,-50%);} .handle.nw{top:0;left:0;} .handle.ne{top:0;left:100%;} .handle.sw{top:100%;left:0;} .handle.se{top:100%;left:100%;}
-    .tool-btn{ @apply px-3 py-2 rounded-lg border border-slate-300 hover:bg-slate-100 active:scale-95 transition; }
-    .btn-primary{ @apply px-3 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 active:scale-95; }
-    .btn{ @apply px-3 py-2 rounded-lg border border-slate-300 hover:bg-slate-100 active:scale-95; }
-    .kbd{ @apply px-2 py-0.5 rounded border border-slate-300 bg-slate-50 text-slate-700; font-size:11px; }
-    .badge{ @apply text-[11px] px-2 py-0.5 rounded-full bg-slate-100 border border-slate-300; }
+    /* Estilos base del lienzo y helpers */
+    #canvas {
+      background: repeating-conic-gradient(#f7fafc 0% 25%, #ffffff 0% 50%) 50%/20px 20px;
+      box-shadow: inset 0 0 0 1px #e2e8f0;
+      position: relative;
+      overflow: hidden;
+      user-select: none;
+    }
+    .selection-ring {
+      position: absolute;
+      border: 1.5px dashed #2563eb;
+      outline: 2px solid rgba(37,99,235,.15);
+      outline-offset: 1px;
+      pointer-events: none;
+      z-index: 9999;
+    }
+    .handle {
+      width: 10px; height: 10px; background: #2563eb; border-radius: 2px; position: absolute;
+      transform: translate(-50%, -50%);
+    }
+    .handle.nw{ top:0; left:0;} .handle.ne{ top:0; left:100%;} .handle.sw{ top:100%; left:0;} .handle.se{ top:100%; left:100%;}
+
+    .tool-btn { @apply px-3 py-2 rounded-lg border border-slate-300 hover:bg-slate-100 active:scale-95 transition; }
+    .badge { @apply text-[11px] px-2 py-0.5 rounded-full bg-slate-100 border border-slate-300; }
+    .btn-primary { @apply px-3 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 active:scale-95; }
+    .btn { @apply px-3 py-2 rounded-lg border border-slate-300 hover:bg-slate-100 active:scale-95; }
+    .kbd { @apply px-2 py-0.5 rounded border border-slate-300 bg-slate-50 text-slate-700; font-size:11px; }
   </style>
 </head>
 <body class="bg-white text-slate-800">
   <div class="max-w-[1400px] mx-auto p-4 space-y-3">
+    <!-- Header -->
     <header class="flex items-center justify-between gap-3">
       <div class="flex items-center gap-3">
         <h1 class="text-xl font-semibold">Editor Visual HTML</h1>
-        <span class="badge">v2</span>
+        <span class="badge">v1</span>
       </div>
       <div class="flex items-center gap-2">
         <button id="btnExportHTML" class="btn-primary">Exportar HTML</button>
@@ -29,10 +50,11 @@
       </div>
     </header>
 
+    <!-- Top controls -->
     <section class="grid grid-cols-12 gap-3">
       <div class="col-span-12 lg:col-span-3 space-y-2">
         <div class="p-3 border rounded-xl space-y-2">
-          <h2 class="font-medium">Tamaño del lienzo</h2>
+          <div class="flex items-center justify-between"><h2 class="font-medium">Tamaño del lienzo</h2></div>
           <div class="grid grid-cols-3 gap-2 text-sm">
             <label class="col-span-1 flex items-center gap-2">W<input id="inpW" type="number" class="w-full border rounded-lg px-2 py-1" value="1080"></label>
             <label class="col-span-1 flex items-center gap-2">H<input id="inpH" type="number" class="w-full border rounded-lg px-2 py-1" value="1080"></label>
@@ -46,7 +68,7 @@
         </div>
 
         <div class="p-3 border rounded-xl space-y-2">
-          <h2 class="font-medium">Insertar</h2>
+          <div class="flex items-center justify-between"><h2 class="font-medium">Insertar</h2></div>
           <div class="grid grid-cols-2 gap-2">
             <button id="addRect" class="btn">Rectángulo</button>
             <button id="addCircle" class="btn">Círculo</button>
@@ -56,23 +78,24 @@
         </div>
 
         <div class="p-3 border rounded-xl space-y-2">
-          <h2 class="font-medium">Importar HTML</h2>
+          <div class="flex items-center justify-between"><h2 class="font-medium">Importar HTML</h2></div>
           <textarea id="taHTML" class="w-full h-40 border rounded-lg p-2 font-mono text-[12px]" placeholder="Pega aquí tu HTML (solo el contenido del post)"></textarea>
           <div class="flex items-center gap-2">
             <button id="btnLoadHTML" class="btn-primary">Cargar al lienzo</button>
-            <button id="btnToAbsolute" class="btn" title="Convierte elementos a absoluto para moverlos">Hacer movibles</button>
+            <button id="btnToAbsolute" class="btn" title="Convierte elementos en posicionamiento absoluto para poder moverlos">Hacer movibles</button>
           </div>
-          <p class="text-xs text-slate-500">Tip: marca con <code>data-editable</code> lo que quieras mover/editar.</p>
+          <p class="text-xs text-slate-500">Consejo: añade <code>data-editable</code> a los elementos de tu plantilla para control fino.</p>
         </div>
       </div>
 
+      <!-- Canvas column -->
       <div class="col-span-12 lg:col-span-6">
         <div class="p-3 border rounded-xl">
           <div id="canvasWrap" class="w-full overflow-auto">
             <div id="canvas" class="mx-auto" style="width:1080px;height:1080px;"></div>
           </div>
           <div class="flex items-center justify-between pt-3 text-xs text-slate-500">
-            <div>Tip: doble clic sobre texto para editar <span class="kbd">contentEditable</span>.</div>
+            <div>Tip: doble clic sobre un texto para editarlo <span class="kbd">contentEditable</span>.</div>
             <div class="flex items-center gap-2">
               <button id="btnZoomOut" class="btn">-</button>
               <span id="lblZoom" class="w-10 text-center">100%</span>
@@ -83,6 +106,7 @@
         </div>
       </div>
 
+      <!-- Properties -->
       <div class="col-span-12 lg:col-span-3 space-y-2">
         <div class="p-3 border rounded-xl space-y-2">
           <div class="flex items-center justify-between"><h2 class="font-medium">Propiedades</h2><span id="selTag" class="text-xs text-slate-500"></span></div>
@@ -90,7 +114,7 @@
             <label class="col-span-2">Texto
               <input id="propText" type="text" class="w-full border rounded-lg px-2 py-1" placeholder="(para elementos con texto)">
             </label>
-            <label>Fuente manual
+            <label>Fuente
               <input id="propFontFamily" type="text" class="w-full border rounded-lg px-2 py-1" placeholder="'Inter', Arial">
             </label>
             <label>Tamaño
@@ -122,38 +146,8 @@
           </div>
         </div>
 
-        <div class="p-3 border rounded-xl space-y-3">
-          <h2 class="font-medium">Acciones rápidas & Fuentes</h2>
-          <div class="flex flex-wrap gap-2 text-sm">
-            <button id="btnCopy" class="btn">Copiar <span class="kbd">Ctrl+C</span></button>
-            <button id="btnPaste" class="btn">Pegar <span class="kbd">Ctrl+V</span></button>
-            <button id="btnDuplicate" class="btn">Duplicar <span class="kbd">Ctrl+D</span></button>
-            <button id="btnBigger" class="btn">Más grande <span class="kbd">Ctrl+=</span></button>
-            <button id="btnSmaller" class="btn">Más pequeño <span class="kbd">Ctrl+-</span></button>
-          </div>
-          <label class="text-sm">Fuente (15 opciones)
-            <select id="fontList" class="w-full border rounded-lg px-2 py-1 mt-1">
-              <option value="Inter">Inter</option>
-              <option value="Poppins">Poppins</option>
-              <option value="Montserrat">Montserrat</option>
-              <option value="Roboto">Roboto</option>
-              <option value="Open Sans">Open Sans</option>
-              <option value="Lato">Lato</option>
-              <option value="Raleway">Raleway</option>
-              <option value="Nunito">Nunito</option>
-              <option value="Oswald">Oswald</option>
-              <option value="Source Sans 3">Source Sans 3</option>
-              <option value="Work Sans">Work Sans</option>
-              <option value="PT Sans">PT Sans</option>
-              <option value="Merriweather">Merriweather</option>
-              <option value="Playfair Display">Playfair Display</option>
-              <option value="Bebas Neue">Bebas Neue</option>
-            </select>
-          </label>
-        </div>
-
         <div class="p-3 border rounded-xl space-y-2">
-          <h2 class="font-medium">HTML actual</h2>
+          <div class="flex items-center justify-between"><h2 class="font-medium">HTML actual</h2></div>
           <textarea id="taOut" class="w-full h-40 border rounded-lg p-2 font-mono text-[12px]" readonly></textarea>
           <div class="flex items-center gap-2">
             <button id="btnRefreshHTML" class="btn">Refrescar</button>
@@ -165,63 +159,135 @@
     </section>
   </div>
 
+  <!-- Libs -->
   <script src="https://cdn.jsdelivr.net/npm/interactjs/dist/interact.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/html-to-image@1.11.11/dist/html-to-image.min.js"></script>
+
   <script>
+  // ===============================
+  // Utilidades
+  // ===============================
   const $ = (sel, root=document) => root.querySelector(sel);
   const $$ = (sel, root=document) => Array.from(root.querySelectorAll(sel));
+
   const canvas = $('#canvas');
   const taHTML = $('#taHTML');
   const taOut  = $('#taOut');
   const selTag = $('#selTag');
+
   let selected = null;
   let zoom = 1;
-  let _clip = null; // portapapeles interno
 
-  function uid(prefix='el'){ return prefix + '-' + Math.random().toString(36).slice(2,8); }
+  function uid(prefix='el'){
+    return prefix + '-' + Math.random().toString(36).slice(2,8);
+  }
+
   function canvasRect(){ return canvas.getBoundingClientRect(); }
+
   function clamp(n, min, max){ return Math.max(min, Math.min(n, max)); }
 
   function makeAbsolute(el){
+    // Convierte cualquier elemento a absoluto y lo reubica como hijo directo del canvas
+    // para evitar que se "pierda" por offsets relativos a su contenedor original.
     if(!el || el===canvas) return;
+
     const cRect = canvasRect();
     const r = el.getBoundingClientRect();
-    const w = r.width / zoom; const h = r.height / zoom;
+    const w = r.width / zoom; 
+    const h = r.height/ zoom;
     const left = ((r.left - cRect.left) + canvas.scrollLeft) / zoom;
     const top  = ((r.top  - cRect.top)  + canvas.scrollTop ) / zoom;
+
+    // Asegurar que después de reparentar siga viéndose igual
     el.style.margin = '0';
     el.style.position = 'absolute';
-    el.style.left = left + 'px'; el.style.top = top + 'px';
-    el.style.width = w + 'px'; el.style.height = (h>0? h : el.offsetHeight) + 'px';
+    el.style.left = left + 'px';
+    el.style.top  = top  + 'px';
+    el.style.width = w + 'px';
+    el.style.height= (h>0? h : el.offsetHeight) + 'px';
     el.style.boxSizing = 'border-box';
     if(!el.style.zIndex) el.style.zIndex = '1';
-    if(el.parentElement !== canvas){ canvas.appendChild(el); }
+
+    // Reparentamos para que la referencia de posicionamiento sea el canvas
+    if(el.parentElement !== canvas){
+      canvas.appendChild(el);
+    }
   }
 
-  function wrapDefaults(el){ el.setAttribute('tabindex','0'); el.dataset.movable='1'; el.style.cursor='move'; el.style.touchAction='none'; }
+  function wrapDefaults(el){
+    el.setAttribute('tabindex','0');
+    el.dataset.movable = '1';
+    el.style.cursor = 'move';
+    el.style.touchAction = 'none';
+  }
 
   function addElement(kind){
     const el = document.createElement('div');
-    el.id = uid('node'); el.style.position='absolute'; el.style.left='80px'; el.style.top='80px'; el.style.width='200px'; el.style.height='120px';
-    el.style.display='flex'; el.style.alignItems='center'; el.style.justifyContent='center';
-    el.style.fontFamily='Inter, system-ui, Arial'; el.style.fontSize='24px'; el.style.color='#111827';
-    el.style.background='#ffffff'; el.style.border='1px solid #cbd5e1'; el.style.borderRadius='8px'; el.style.boxShadow='0 1px 2px rgba(0,0,0,.06)';
-    if(kind==='rect'){ el.textContent='Rectángulo'; }
-    else if(kind==='circle'){ el.textContent='Círculo'; el.style.borderRadius='9999px'; }
-    else if(kind==='text'){ el.textContent='Doble clic para editar'; el.style.background='transparent'; el.style.border='none'; el.style.height='auto'; }
-    else if(kind==='image'){ el.style.background='#e2e8f0'; el.style.border='1px dashed #94a3b8'; el.textContent='Imagen'; el.dataset.imageHolder='1'; }
-    el.setAttribute('data-editable',''); wrapDefaults(el); canvas.appendChild(el); enableInteract(el); select(el);
+    el.id = uid('node');
+    el.style.position = 'absolute';
+    el.style.left = '80px';
+    el.style.top  = '80px';
+    el.style.width = '200px';
+    el.style.height= '120px';
+    el.style.display= 'flex';
+    el.style.alignItems = 'center';
+    el.style.justifyContent = 'center';
+    el.style.fontFamily = 'Inter, system-ui, Arial';
+    el.style.fontSize = '24px';
+    el.style.color = '#111827';
+    el.style.background = '#ffffff';
+    el.style.border = '1px solid #cbd5e1';
+    el.style.borderRadius = '8px';
+    el.style.boxShadow = '0 1px 2px rgba(0,0,0,.06)';
+
+    if(kind==='rect'){
+      el.textContent = 'Rectángulo';
+    } else if(kind==='circle'){
+      el.textContent = 'Círculo';
+      el.style.borderRadius = '9999px';
+    } else if(kind==='text'){
+      el.textContent = 'Doble clic para editar';
+      el.style.background = 'transparent';
+      el.style.border = 'none';
+      el.style.height = 'auto';
+    } else if(kind==='image'){
+      el.style.background = '#e2e8f0';
+      el.style.border = '1px dashed #94a3b8';
+      el.textContent = 'Imagen';
+      el.dataset.imageHolder = '1';
+    }
+
+    el.setAttribute('data-editable','');
+    wrapDefaults(el);
+    canvas.appendChild(el);
+    enableInteract(el);
+    select(el);
   }
 
   function select(el){
     if(!el || el===canvas){ return deselect(); }
     if(!el.dataset.movable){ wrapDefaults(el); }
-    selected = el; $$('.selection-ring', canvas).forEach(n=>n.remove());
-    const ring = document.createElement('div'); ring.className='selection-ring';
-    ring.style.left = el.style.left || (el.offsetLeft + 'px'); ring.style.top = el.style.top || (el.offsetTop + 'px');
-    ring.style.width= el.offsetWidth + 'px'; ring.style.height= el.offsetHeight + 'px';
-    const hNW=document.createElement('div'); hNW.className='handle nw'; const hNE=document.createElement('div'); hNE.className='handle ne'; const hSW=document.createElement('div'); hSW.className='handle sw'; const hSE=document.createElement('div'); hSE.className='handle se'; ring.append(hNW,hNE,hSW,hSE);
-    ring.dataset.for = el.id || (el.id = uid('node')); canvas.appendChild(ring);
+    selected = el;
+    $$('.selection-ring', canvas).forEach(n=>n.remove());
+
+    // Dibujar selección
+    const ring = document.createElement('div');
+    ring.className = 'selection-ring';
+    ring.style.left = el.style.left || (el.offsetLeft + 'px');
+    ring.style.top  = el.style.top  || (el.offsetTop  + 'px');
+    ring.style.width= el.offsetWidth + 'px';
+    ring.style.height= el.offsetHeight + 'px';
+
+    const hNW = document.createElement('div'); hNW.className='handle nw';
+    const hNE = document.createElement('div'); hNE.className='handle ne';
+    const hSW = document.createElement('div'); hSW.className='handle sw';
+    const hSE = document.createElement('div'); hSE.className='handle se';
+    ring.append(hNW,hNE,hSW,hSE);
+
+    ring.dataset.for = el.id || (el.id = uid('node'));
+    canvas.appendChild(ring);
+
+    // UI propiedades
     selTag.textContent = '<' + el.tagName.toLowerCase() + (el.id? ('#'+el.id):'') + '>';
     $('#propText').value = (el.textContent && el.textContent.trim()) || '';
     $('#propFontFamily').value = el.style.fontFamily || '';
@@ -233,30 +299,130 @@
     $('#propOpacity').value = parseFloat(el.style.opacity || 1);
     $('#propZ').value = parseInt(el.style.zIndex || 1);
   }
-  function deselect(){ selected=null; $$('.selection-ring', canvas).forEach(n=>n.remove()); selTag.textContent=''; }
+
+  function deselect(){
+    selected = null;
+    $$('.selection-ring', canvas).forEach(n=>n.remove());
+    selTag.textContent = '';
+  }
 
   function enableInteract(el){
-    if(el._interactEnabled) return; el._interactEnabled = true;
+    if(el._interactEnabled) return;
+    el._interactEnabled = true;
     interact(el)
-      .draggable({ listeners:{ move (event){ const x=(parseFloat(el.style.left)||0)+event.dx/zoom; const y=(parseFloat(el.style.top)||0)+event.dy/zoom; el.style.left=x+'px'; el.style.top=y+'px'; updateRing(el); } } })
-      .resizable({ edges:{ left:true,right:true,bottom:true,top:true } })
-      .on('resizemove', (event)=>{ let { x, y } = event.target.dataset; x=(parseFloat(x)||parseFloat(event.target.style.left)||0); y=(parseFloat(y)||parseFloat(event.target.style.top)||0); const w=event.rect.width/zoom; const h=event.rect.height/zoom; event.target.style.width=w+'px'; event.target.style.height=h+'px'; x+=event.deltaRect.left/zoom; y+=event.deltaRect.top/zoom; event.target.style.left=x+'px'; event.target.style.top=y+'px'; event.target.dataset.x=x; event.target.dataset.y=y; updateRing(event.target); });
+      .draggable({
+        listeners: {
+          move (event) {
+            const x = (parseFloat(el.style.left)||0) + event.dx/zoom;
+            const y = (parseFloat(el.style.top)||0)  + event.dy/zoom;
+            el.style.left = x + 'px';
+            el.style.top  = y + 'px';
+            updateRing(el);
+          }
+        }
+      })
+      .resizable({
+        edges: { left: true, right: true, bottom: true, top: true },
+      })
+      .on('resizemove', (event)=>{
+        let { x, y } = event.target.dataset;
+        x = (parseFloat(x)||parseFloat(event.target.style.left)||0);
+        y = (parseFloat(y)||parseFloat(event.target.style.top)||0);
+        const w = event.rect.width/zoom; const h = event.rect.height/zoom;
+        event.target.style.width = w + 'px';
+        event.target.style.height= h + 'px';
+        x += event.deltaRect.left/zoom;
+        y += event.deltaRect.top/zoom;
+        event.target.style.left = x + 'px';
+        event.target.style.top  = y + 'px';
+        event.target.dataset.x = x;
+        event.target.dataset.y = y;
+        updateRing(event.target);
+      });
   }
-  function updateRing(el){ const ring = $(`.selection-ring[data-for="${el.id}"]`, canvas); if(!ring) return; ring.style.left = el.style.left; ring.style.top = el.style.top; ring.style.width = el.offsetWidth+'px'; ring.style.height = el.offsetHeight+'px'; }
 
-  function rgbToHex(rgb){ if(!rgb) return '#000000'; const m = rgb.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/); if(!m) return '#000000'; return '#' + [m[1],m[2],m[3]].map(x=>('0'+parseInt(x).toString(16)).slice(-2)).join(''); }
-  function refreshHTML(){ taOut.value = canvas.innerHTML.trim(); }
-  function download(filename, text){ const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([text],{type:'text/html'})); a.download=filename; a.click(); }
+  function updateRing(el){
+    const ring = $(`.selection-ring[data-for="${el.id}"]`, canvas);
+    if(!ring) return;
+    ring.style.left = el.style.left;
+    ring.style.top  = el.style.top;
+    ring.style.width= el.offsetWidth + 'px';
+    ring.style.height= el.offsetHeight + 'px';
+  }
 
-  // Insertar
+  function rgbToHex(rgb){
+    if(!rgb) return '#000000';
+    const m = rgb.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/);
+    if(!m) return '#000000';
+    return '#' + [m[1],m[2],m[3]].map(x=>('0'+parseInt(x).toString(16)).slice(-2)).join('');
+  }
+
+  function refreshHTML(){
+    taOut.value = canvas.innerHTML.trim();
+  }
+
+  function download(filename, text){
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([text], {type:'text/html'}));
+    a.download = filename;
+    a.click();
+  }
+
+  // ===============================
+  // Eventos UI
+  // ===============================
   $('#addRect').onclick = ()=> addElement('rect');
   $('#addCircle').onclick = ()=> addElement('circle');
   $('#addText').onclick = ()=> addElement('text');
-  $('#addImage').onclick = async ()=>{ const url=prompt('URL de la imagen:'); if(!url) return; const img=document.createElement('img'); img.id=uid('img'); img.src=url; img.alt='image'; img.style.position='absolute'; img.style.left='100px'; img.style.top='100px'; img.style.width='300px'; img.style.height='auto'; img.setAttribute('data-editable',''); wrapDefaults(img); canvas.appendChild(img); enableInteract(img); select(img); };
+  $('#addImage').onclick = async ()=>{
+    const url = prompt('URL de la imagen:');
+    if(!url) return;
+    const img = document.createElement('img');
+    img.id = uid('img');
+    img.src = url; img.alt = 'image';
+    img.style.position='absolute'; img.style.left='100px'; img.style.top='100px';
+    img.style.width='300px'; img.style.height='auto';
+    img.setAttribute('data-editable','');
+    wrapDefaults(img); canvas.appendChild(img); enableInteract(img); select(img);
+  };
 
-  // Importar HTML
-  $('#btnLoadHTML').onclick = ()=>{ const html = taHTML.value || ''; canvas.innerHTML = html; $$('#canvas [data-editable]').forEach(el=>{ if(getComputedStyle(el).position!=='absolute') makeAbsolute(el); wrapDefaults(el); enableInteract(el); }); deselect(); refreshHTML(); };
-  $('#btnToAbsolute').onclick = ()=>{ const list=$$('#canvas *:not(style):not(script)'); list.forEach(el=>{ if(el===canvas) return; const st=getComputedStyle(el); if(st.position!=='absolute'){ try{ makeAbsolute(el); wrapDefaults(el); enableInteract(el);}catch(e){} } else { wrapDefaults(el); enableInteract(el); } }); alert('Elementos convertidos a movibles.'); };
+  $('#btnLoadHTML').onclick = ()=>{
+    const html = taHTML.value || '';
+    canvas.innerHTML = html;
+    // Opcional: activar movibilidad en elementos marcados
+    $$('#canvas [data-editable]').forEach(el=>{ if(getComputedStyle(el).position!=='absolute') makeAbsolute(el); wrapDefaults(el); enableInteract(el); });
+    deselect(); refreshHTML();
+  };
+
+  $('#btnToAbsolute').onclick = ()=>{
+    const list = $$('#canvas *:not(style):not(script)');
+    list.forEach(el=>{
+      if(el===canvas) return;
+      const st = getComputedStyle(el);
+      if(st.position!=='absolute'){
+        try{ makeAbsolute(el); wrapDefaults(el); enableInteract(el);}catch(e){}
+      } else { wrapDefaults(el); enableInteract(el); }
+    });
+    alert('Elementos convertidos a movibles.');
+  };
+
+  $('#btnRefreshHTML').onclick = refreshHTML;
+  $('#btnCopyHTML').onclick = ()=>{ refreshHTML(); navigator.clipboard.writeText(taOut.value); };
+  $('#btnDownloadHTML').onclick = ()=>{
+    refreshHTML();
+    const w = parseInt($('#inpW').value)||1080; const h=parseInt($('#inpH').value)||1080;
+    const outer = `<!DOCTYPE html><html lang=\"es\"><head><meta charset=\"utf-8\"/><meta name=\"viewport\" content=\"width=device-width, initial-scale=1\"/><title>Export</title><style>body{margin:0}#post{position:relative;width:${w}px;height:${h}px;overflow:hidden}</style></head><body><div id=\"post\">${taOut.value}</div></body></html>`;
+    download('post-export.html', outer);
+  };
+
+  $('#btnExportHTML').onclick = ()=> $('#btnDownloadHTML').click();
+
+  $('#btnExportPNG').onclick = async ()=>{
+    try{
+      const dataUrl = await htmlToImage.toPng(canvas);
+      const a = document.createElement('a'); a.href = dataUrl; a.download = 'post.png'; a.click();
+    }catch(e){ alert('No se pudo exportar a PNG: ' + e.message); }
+  };
 
   // Propiedades
   $('#propText').oninput = ()=>{ if(selected){ selected.textContent = $('#propText').value; refreshHTML(); } };
@@ -273,50 +439,50 @@
   $('#btnBack').onclick  = ()=>{ if(selected){ selected.style.zIndex = (parseInt(selected.style.zIndex||1)-10); refreshHTML(); }};
   $('#btnDelete').onclick = ()=>{ if(selected){ selected.remove(); deselect(); refreshHTML(); }};
 
-  // Acciones rápidas & Fuentes
-  const FONT_PRESETS = ['Inter','Poppins','Montserrat','Roboto','Open Sans','Lato','Raleway','Nunito','Oswald','Source Sans 3','Work Sans','PT Sans','Merriweather','Playfair Display','Bebas Neue'];
-  function ensureFontLoaded(name){ const id='gf-'+name.replace(/\s+/g,'+'); if(!document.getElementById(id)){ const link=document.createElement('link'); link.id=id; link.rel='stylesheet'; link.href=`https://fonts.googleapis.com/css2?family=${encodeURIComponent(name)}:wght@300;400;600;700;800&display=swap`; document.head.appendChild(link); } }
-  function applyFont(name){ if(!selected) return; ensureFontLoaded(name); selected.style.fontFamily = `'${name}', system-ui, Arial`; $('#propFontFamily').value = selected.style.fontFamily; refreshHTML(); }
-  $('#fontList').onchange = (e)=> applyFont(e.target.value);
-
-  function duplicateSelected(){ if(!selected) return; const clone=selected.cloneNode(true); clone.id=uid('node'); const left=(parseFloat(selected.style.left)||0)+20; const top=(parseFloat(selected.style.top)||0)+20; clone.style.left=left+'px'; clone.style.top=top+'px'; canvas.appendChild(clone); wrapDefaults(clone); enableInteract(clone); select(clone); refreshHTML(); }
-  function copySelected(){ if(!selected) return; _clip = selected.cloneNode(true); }
-  function pasteClipboard(){ if(!_clip) return; const node=_clip.cloneNode(true); node.id=uid('node'); const left=(parseFloat(selected?.style.left)||100)+30; const top=(parseFloat(selected?.style.top)||100)+30; node.style.left=left+'px'; node.style.top=top+'px'; canvas.appendChild(node); wrapDefaults(node); enableInteract(node); select(node); refreshHTML(); }
-  function scaleSelected(factor){ if(!selected) return; const w=selected.offsetWidth*factor; const h=selected.offsetHeight*factor; selected.style.width=w+'px'; selected.style.height=h+'px'; const fs=parseFloat(getComputedStyle(selected).fontSize); if(fs){ selected.style.fontSize=(fs*factor)+'px'; } refreshHTML(); updateRing(selected); }
-  $('#btnCopy').onclick = copySelected; $('#btnPaste').onclick = pasteClipboard; $('#btnDuplicate').onclick = duplicateSelected; $('#btnBigger').onclick = ()=> scaleSelected(1.1); $('#btnSmaller').onclick = ()=> scaleSelected(0.9);
-
-  // Teclado
-  document.addEventListener('keydown', (e)=>{
-    if(e.target && (e.target.tagName==='INPUT' || e.target.tagName==='TEXTAREA' || e.target.isContentEditable)) return;
-    if(e.ctrlKey && e.key.toLowerCase()==='d'){ e.preventDefault(); duplicateSelected(); }
-    if(e.ctrlKey && e.key.toLowerCase()==='c'){ e.preventDefault(); copySelected(); }
-    if(e.ctrlKey && e.key.toLowerCase()==='v'){ e.preventDefault(); pasteClipboard(); }
-    if(e.ctrlKey && (e.key==='=' || e.key==='+')){ e.preventDefault(); scaleSelected(1.1); }
-    if(e.ctrlKey && e.key==='-'){ e.preventDefault(); scaleSelected(0.9); }
-    if(selected){ const step = e.shiftKey? 10 : 1; let moved=false; let x=parseFloat(selected.style.left)||0; let y=parseFloat(selected.style.top)||0; if(e.key==='ArrowLeft'){ x-=step; moved=true; } if(e.key==='ArrowRight'){ x+=step; moved=true; } if(e.key==='ArrowUp'){ y-=step; moved=true; } if(e.key==='ArrowDown'){ y+=step; moved=true; } if(moved){ selected.style.left=x+'px'; selected.style.top=y+'px'; updateRing(selected); refreshHTML(); e.preventDefault(); } }
+  // Selección por click y edición de texto por doble click
+  canvas.addEventListener('click', (e)=>{
+    const target = e.target;
+    if(target===canvas){ deselect(); return; }
+    const el = target.closest('[data-editable], img, svg, p, span, h1, h2, h3, h4, h5, h6, div');
+    if(!el || el===canvas) return;
+    if(getComputedStyle(el).position!=='absolute') makeAbsolute(el);
+    wrapDefaults(el); enableInteract(el); select(el);
   });
 
-  // Exportar
-  $('#btnRefreshHTML').onclick = refreshHTML;
-  $('#btnCopyHTML').onclick  = ()=>{ refreshHTML(); navigator.clipboard.writeText(taOut.value); };
-  $('#btnDownloadHTML').onclick = ()=>{ refreshHTML(); const w=parseInt($('#inpW').value)||1080; const h=parseInt($('#inpH').value)||1080; const outer = `<!DOCTYPE html><html lang=\"es\"><head><meta charset=\"utf-8\"/><meta name=\"viewport\" content=\"width=device-width, initial-scale=1\"/><title>Export</title><style>body{margin:0}#post{position:relative;width:${w}px;height:${h}px;overflow:hidden}</style></head><body><div id=\"post\">${taOut.value}</div></body></html>`; const fonts = document.querySelectorAll('link[id^="gf-"]'); let fontLinks=''; fonts.forEach(l=>{fontLinks += l.outerHTML;}); const full = outer.replace('</head>', fontLinks + '</head>'); download('post-export.html', full); };
-  $('#btnExportHTML').onclick = ()=> $('#btnDownloadHTML').click();
-  $('#btnExportPNG').onclick = async ()=>{ try{ const dataUrl = await htmlToImage.toPng(canvas); const a=document.createElement('a'); a.href=dataUrl; a.download='post.png'; a.click(); }catch(e){ alert('No se pudo exportar a PNG: '+e.message); } };
+  canvas.addEventListener('dblclick', (e)=>{
+    const el = e.target.closest('[data-editable], p, span, h1, h2, h3, h4, h5, h6, div');
+    if(!el) return;
+    el.contentEditable = (el.contentEditable !== 'true');
+    if(el.contentEditable==='true'){ el.focus(); }
+  });
 
-  // Zoom
-  function applyZoom(){ canvas.style.transform = `scale(${zoom})`; canvas.style.transformOrigin='top left'; $('#lblZoom').textContent = Math.round(zoom*100)+'%'; }
+  // Zoom (visualmente escala el canvas)
+  function applyZoom(){
+    canvas.style.transform = `scale(${zoom})`;
+    canvas.style.transformOrigin = 'top left';
+    $('#lblZoom').textContent = Math.round(zoom*100)+'%';
+  }
   $('#btnZoomIn').onclick = ()=>{ zoom = clamp(zoom+0.1, .2, 3); applyZoom(); };
   $('#btnZoomOut').onclick= ()=>{ zoom = clamp(zoom-0.1, .2, 3); applyZoom(); };
   $('#btnZoomReset').onclick= ()=>{ zoom = 1; applyZoom(); };
   applyZoom();
 
   // Presets y tamaño
-  $$("[data-preset]").forEach(btn=>{ btn.onclick = ()=>{ const [w,h]=btn.dataset.preset.split('x').map(Number); $('#inpW').value=w; $('#inpH').value=h; resizeCanvas(w,h); }; });
-  $('#btnResize').onclick = ()=>{ const w=parseInt($('#inpW').value)||1080; const h=parseInt($('#inpH').value)||1080; resizeCanvas(w,h); };
+  $$("[data-preset]").forEach(btn=>{
+    btn.onclick = ()=>{
+      const [w,h] = btn.dataset.preset.split('x').map(Number);
+      $('#inpW').value = w; $('#inpH').value = h; resizeCanvas(w,h);
+    };
+  });
+  $('#btnResize').onclick = ()=>{
+    const w = parseInt($('#inpW').value)||1080; const h=parseInt($('#inpH').value)||1080; resizeCanvas(w,h);
+  };
   function resizeCanvas(w,h){ canvas.style.width = w+'px'; canvas.style.height = h+'px'; }
 
-  // Inicio demo
-  addElement('text'); $('#propText').value = 'Tu diseño aquí'; if(selected){ selected.textContent='Tu diseño aquí'; }
+  // Inicio: un fondo de ejemplo
+  addElement('text');
+  $('#propText').value = 'Tu diseño aquí';
+  if(selected){ selected.textContent = 'Tu diseño aquí'; }
   refreshHTML();
   </script>
 </body>
