@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Editor Web — v2</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<header class="topbar">
+  <div class="brand">Editor Web — v2</div>
+  <div class="canvas-controls">
+    <label>Ancho: <input id="canvasWidth" type="number" value="900" min="200"></label>
+    <label>Alto: <input id="canvasHeight" type="number" value="600" min="200"></label>
+    <label>Fondo: <input id="canvasBg" type="color" value="#ffffff"></label>
+    <button id="applyCanvas">Aplicar</button>
+    <button id="clearCanvas" title="Eliminar todo">Limpiar</button>
+    <button id="saveHTML" title="Guardar como HTML">Guardar HTML</button>
+  </div>
+</header>
+
+<main class="layout">
+  <aside class="sidebar">
+    <h3>Agregar</h3>
+    <button id="addRect">Rectángulo</button>
+    <button id="addCircle">Círculo</button>
+    <button id="addText">Texto</button>
+    <div class="img-adder">
+      <input id="imgUrl" type="url" placeholder="URL de imagen..." />
+      <button id="addImage">Imagen</button>
+    </div>
+    <details>
+      <summary>Acciones</summary>
+      <button id="bringFront">Traer al frente</button>
+      <button id="sendBack">Enviar al fondo</button>
+      <button id="deleteItem" class="danger">Eliminar seleccionado</button>
+    </details>
+    <p class="hint">Tip: Arrastra usando la barra superior del bloque. Haz clic dentro del texto para escribir.</p>
+  </aside>
+
+  <section class="stage-wrap">
+    <div id="canvas" class="canvas" style="width:900px;height:600px;background:#ffffff;"></div>
+  </section>
+
+  <aside class="inspector">
+    <h3>Código HTML</h3>
+    <textarea id="htmlCode" placeholder="Aquí verás o pegarás HTML..."></textarea>
+    <div class="code-actions">
+      <button id="refreshFromCanvas" title="Ver HTML actual del lienzo">Ver HTML del lienzo</button>
+      <button id="insertHTML" title="Insertar el HTML como bloque movible">Insertar HTML</button>
+      <button id="replaceCanvas" class="danger" title="Reemplaza TODO el lienzo">Reemplazar lienzo</button>
+    </div>
+
+    <h3>Propiedades</h3>
+    <div id="noSel">Sin selección</div>
+    <div id="props" class="hidden">
+      <div class="row"><label>X: <input id="posX" type="number"></label> <label>Y: <input id="posY" type="number"></label></div>
+      <div class="row"><label>Ancho: <input id="propW" type="number" min="10"></label> <label>Alto: <input id="propH" type="number" min="10"></label></div>
+      <div class="row"><label>Fondo: <input id="bgColor" type="color" value="#4aa3ff"></label></div>
+      <div class="row"><label>Imagen de fondo (URL): <input id="bgImage" type="url" placeholder="https://..."></label></div>
+      <div class="row"><label>Borde color: <input id="bdColor" type="color" value="#1e293b"></label> <label>Ancho: <input id="bdWidth" type="number" value="1" min="0">px</label></div>
+      <div class="row"><label>Radio: <input id="bdRadius" type="number" value="8" min="0">px</label> <label>Opacidad: <input id="opacity" type="range" min="0" max="1" step="0.05" value="1"></label></div>
+
+      <details id="textBlock">
+        <summary>Texto</summary>
+        <div class="row">
+          <label>Tamaño: <input id="fontSize" type="number" value="28" min="8">px</label>
+          <label>Color: <input id="fontColor" type="color" value="#111111"></label>
+        </div>
+        <div class="row">
+          <label>Fuente:
+            <select id="fontFamily">
+              <option>Arial, Helvetica, sans-serif</option>
+              <option>Georgia, serif</option>
+              <option>"Trebuchet MS", sans-serif</option>
+              <option>Impact, Charcoal, sans-serif</option>
+              <option>"Courier New", monospace</option>
+            </select>
+          </label>
+          <label>Peso:
+            <select id="fontWeight">
+              <option value="400">Normal</option>
+              <option value="600">Semi-bold</option>
+              <option value="700">Bold</option>
+            </select>
+          </label>
+        </div>
+      </details>
+    </div>
+  </aside>
+</main>
+
+<script src="app.js"></script>
+</body>
+</html>
