@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Editor Visual HTML — v3</title>
+  <title>Editor Visual HTML — v4</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
     #canvas {
@@ -143,31 +143,10 @@
     }}}).resizable({edges:{left:true,right:true,bottom:true,top:true}}).on('resizemove',e=>{el.style.width=e.rect.width+'px';el.style.height=e.rect.height+'px';});
     }
 
-    // Teclado mover y redimensionar
+    // Mover con teclado
     document.addEventListener('keydown',e=>{
-      if(!selected) return;
+      if(!selected)return;
       const step=(e.shiftKey?10:2);
-      if(['ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.key)){
-        e.preventDefault();
-        let l=parseInt(selected.style.left)||0;
-        let t=parseInt(selected.style.top)||0;
-        if(e.key==='ArrowUp') t-=step;
-        if(e.key==='ArrowDown') t+=step;
-        if(e.key==='ArrowLeft') l-=step;
-        if(e.key==='ArrowRight') l+=step;
-        selected.style.left=l+'px';
-        selected.style.top=t+'px';
-      }
-      if(e.ctrlKey && e.key==='c'){ selected._copied = selected.cloneNode(true); }
-      if(e.ctrlKey && e.key==='v' && selected._copied){
-        const clone=selected._copied.cloneNode(true); clone.id=uid();
-        clone.style.left=(parseInt(selected.style.left)+20)+'px';
-        clone.style.top=(parseInt(selected.style.top)+20)+'px';
-        canvas.appendChild(clone); enableInteract(clone); select(clone); refreshList();
-      }
-      if(e.key==='+'||e.key==='='){ let fs=parseInt(selected.style.fontSize)||24; selected.style.fontSize=(fs+2)+'px'; }
-      if(e.key==='-'){ let fs=parseInt(selected.style.fontSize)||24; selected.style.fontSize=(fs-2)+'px'; }
-    });
       if(['ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.key)){
         e.preventDefault();
         let l=parseInt(selected.style.left)||0;
@@ -179,11 +158,6 @@
         selected.style.left=l+'px';
         selected.style.top=t+'px';
       }
-      if(e.ctrlKey && e.key==='c'){selected._copied=selected.cloneNode(true);} // copiar
-      if(e.ctrlKey && e.key==='v' && selected._copied){
-        const clone=selected._copied.cloneNode(true);clone.id=uid();clone.style.left=(parseInt(selected.style.left)+20)+'px';clone.style.top=(parseInt(selected.style.top)+20)+'px';canvas.appendChild(clone);enableInteract(clone);select(clone);}
-      if(e.key==='+'||e.key==='='){let fs=parseInt(selected.style.fontSize)||24;selected.style.fontSize=(fs+2)+'px';}
-      if(e.key==='-'){let fs=parseInt(selected.style.fontSize)||24;selected.style.fontSize=(fs-2)+'px';}
     });
 
     $('#addRect').onclick=()=>addElement('rect');
@@ -191,7 +165,32 @@
     $('#addText').onclick=()=>addElement('text');
     $('#addImage').onclick=()=>addElement('image');
 
-    $('#btnDuplicate').onclick=()=>{if(!selected)return;const clone=selected.cloneNode(true);clone.id=uid();clone.style.left=(parseInt(selected.style.left)+20)+'px'
+    $('#btnDuplicate').onclick=()=>{if(!selected)return;const clone=selected.cloneNode(true);clone.id=uid();clone.style.left=(parseInt(selected.style.left)+20)+'px';clone.style.top=(parseInt(selected.style.top)+20)+'px';canvas.appendChild(clone);enableInteract(clone);select(clone);refreshList();};
+
+    $('#btnDelete').onclick=()=>{if(selected){selected.remove();selected=null;refreshList();}};
+
+    $('#btnExportHTML').onclick=()=>{const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([canvas.innerHTML],{type:'text/html'}));a.download='post.html';a.click();};
+    $('#btnExportPNG').onclick=async()=>{const dataUrl=await htmlToImage.toPng(canvas);const a=document.createElement('a');a.href=dataUrl;a.download='post.png';a.click();};
+
+    // Botón Hacer movibles: solo cambia a absolute sin moverlos
+    $('#btnToAbsolute').onclick=()=>{
+      [...canvas.querySelectorAll('*')].forEach(el=>{
+        if(el===canvas) return;
+        const cs=getComputedStyle(el);
+        if(cs.position!=='absolute'){
+          el.style.position='absolute';
+          el.style.left=el.offsetLeft+'px';
+          el.style.top=el.offsetTop+'px';
+        }
+        enableInteract(el);
+      });
+      refreshList();
+    };
+
+    canvas.addEventListener('click', e => {
+      const el = e.target.closest('#canvas > *');
+      if(el) select(el);
+    });}});
     // ======= Convertir a absoluto sin mover (mantener lugar actual) =======
     function makeAbsolute(el){
       if(!el || el===canvas) return;
@@ -224,24 +223,6 @@
       document.getElementById('btnToAbsolute').onclick = ()=> makeAllMovable();
     }
 
-  </script>
-</body>
-</html>lected.style.top)+20)+'px';canvas.appendChild(clone);enableInteract(clone);select(clone);refreshList();};
-
-    $('#propText').oninput=()=>{if(selected)selected.textContent=$('#propText').value;};
-    $('#propFontSize').oninput=()=>{if(selected)selected.style.fontSize=$('#propFontSize').value+'px';};
-    $('#propFontFamily').oninput=()=>{if(selected)selected.style.fontFamily=$('#propFontFamily').value;};
-    $('#propColor').oninput=()=>{if(selected)selected.style.color=$('#propColor').value;};
-
-    $('#btnDelete').onclick=()=>{if(selected){selected.remove();selected=null;refreshList();}};
-
-    $('#btnExportHTML').onclick=()=>{const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([canvas.innerHTML],{type:'text/html'}));a.download='post.html';a.click();};
-    $('#btnExportPNG').onclick=async()=>{const dataUrl=await htmlToImage.toPng(canvas);const a=document.createElement('a');a.href=dataUrl;a.download='post.png';a.click();};
-
-    canvas.addEventListener('click', e => {
-      const el = e.target.closest('#canvas > *');
-      if(el) select(el);
-    });}});
   </script>
 </body>
 </html>
